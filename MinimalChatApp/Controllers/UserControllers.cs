@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -110,8 +111,36 @@ public class UserControllers : ControllerBase
 
     }
 
-    //private method for creating jwt token
-    private string CreateJwtToken(User user)
+
+
+    [HttpGet("users")]
+    [Authorize]
+    public async Task<IActionResult> GetUserList()
+    {
+        try
+        {
+            //Fetching the logged in user's id from claim to filter out response
+            var currentUserId = Guid.Parse(User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
+            var users = await _context.Users
+                .Where(u => u.Id != currentUserId)
+                .Select(u => new GetUserResDto
+                {
+                    Id = u.Id,
+                    Name = u.FullName,
+                    Email = u.Email
+                })
+                .ToListAsync();
+            return Ok(new { users });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "An error occurred while retrieving the user list" });
+        }
+       
+    }
+
+        //private method for creating jwt token
+        private string CreateJwtToken(User user)
     {
         var JwtTokenHandler = new JwtSecurityTokenHandler();
         var secret_key = _configuration["Jwt:key"];
@@ -119,7 +148,7 @@ public class UserControllers : ControllerBase
 
         var identity = new ClaimsIdentity(new Claim[]
             {
-                
+                new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
                 new Claim(ClaimTypes.Name, $"{user.FullName}"),
                 new Claim(ClaimTypes.Email, $"{user.Email}"),
 
@@ -131,7 +160,9 @@ public class UserControllers : ControllerBase
         {
             Subject = identity,
             Expires = DateTime.Now.AddDays(1),
-            SigningCredentials = credentials
+            SigningCredentials = credentials,
+            Audience = _configuration["Jwt:Audience"],
+            Issuer = _configuration["Jwt:Issuer"]
 
         };
 
