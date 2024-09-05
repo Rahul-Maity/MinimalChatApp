@@ -1,4 +1,8 @@
+using System.Text;
+
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 using MinimalChatApp.DomainModel.Data;
 
@@ -10,10 +14,34 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-var configuration = builder.Configuration;
+var _config = builder.Configuration;
 
 
-var connectionString = builder.Configuration.GetConnectionString("Default");
+var connectionString = _config.GetConnectionString("Default");
+
+
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = _config["Jwt:Issuer"],
+            ValidAudience = _config["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:key"]))
+        };
+    });
+
+
+builder.Services.AddAuthorization();
+
+
+
+
 
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
@@ -31,6 +59,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+
+
+app.UseAuthentication();
+
+app.UseRouting();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
