@@ -17,6 +17,11 @@ var connectionString = builder.Configuration.GetConnectionString("Default");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -27,6 +32,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
 
 
 
