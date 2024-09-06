@@ -144,4 +144,55 @@ public class MessagesController : ControllerBase
 
     }
 
+
+    //endpoint for deleting message
+
+    [HttpDelete("messages/{messageId}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteMessage(Guid messageId) {
+
+        if (messageId == Guid.Empty)
+        {
+            return BadRequest(new { error = "Invalid message ID" });
+        }
+
+
+
+        // Extract sender ID from the authenticated user's claims
+        var senderIdClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(senderIdClaim) || !Guid.TryParse(senderIdClaim, out var senderId))
+        {
+            return Unauthorized(new { error = "Invalid authentication token" });
+        }
+
+        try
+        {
+            var message = await _context.Messages.FindAsync(messageId);
+            if (message == null)
+            {
+                return NotFound(new { error = "Message not found" });
+            }
+
+
+            if(message.SenderId != senderId)
+            {
+                return Unauthorized(new { error = "You are not authorized to delete this message" });
+            }
+
+            _context.Messages.Remove(message);
+            await _context.SaveChangesAsync();
+
+
+            return Ok(new { message = "Message deleted successfully" });
+
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing your request" });
+        }
+
+
+    }
+
 }
