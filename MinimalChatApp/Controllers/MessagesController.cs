@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using MinimalChatApp.DomainModel.Data;
+using MinimalChatApp.DomainModel.Dtos.Generic;
 using MinimalChatApp.DomainModel.Dtos.Incoming;
 using MinimalChatApp.DomainModel.Dtos.Outgoing;
 using MinimalChatApp.DomainModel.Models;
@@ -17,7 +18,7 @@ public class MessagesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
-    public MessagesController(ApplicationDbContext context,IConfiguration configuration)
+    public MessagesController(ApplicationDbContext context, IConfiguration configuration)
     {
         _configuration = configuration;
         _context = context;
@@ -33,7 +34,7 @@ public class MessagesController : ControllerBase
             return BadRequest(new { error = "Validation failed", details = errors });
         }
 
-        if(string.IsNullOrWhiteSpace(model.Content))
+        if (string.IsNullOrWhiteSpace(model.Content))
         {
             return BadRequest(new { error = "Message content cannot be empty" });
         }
@@ -78,7 +79,8 @@ public class MessagesController : ControllerBase
 
 
 
-        catch (Exception ex) {
+        catch (Exception ex)
+        {
             return StatusCode(500, new { error = "An error occurred while sending the message", details = ex.Message });
         }
 
@@ -92,7 +94,7 @@ public class MessagesController : ControllerBase
 
     [HttpPut("messages/{messageId}")]
     [Authorize]
-    public async Task<IActionResult> SendMessage(Guid messageId,[FromBody] EditMessageReqDto model)
+    public async Task<IActionResult> SendMessage(Guid messageId, [FromBody] EditMessageReqDto model)
     {
 
         // Validate the model
@@ -111,7 +113,7 @@ public class MessagesController : ControllerBase
         }
 
         //check if the message sender is the one who is try to edit
-        if(message.SenderId!=senderId)
+        if (message.SenderId != senderId)
         {
             return Unauthorized(new { error = "You are not authorized to edit this message" });
         }
@@ -149,7 +151,8 @@ public class MessagesController : ControllerBase
 
     [HttpDelete("messages/{messageId}")]
     [Authorize]
-    public async Task<IActionResult> DeleteMessage(Guid messageId) {
+    public async Task<IActionResult> DeleteMessage(Guid messageId)
+    {
 
         if (messageId == Guid.Empty)
         {
@@ -175,7 +178,7 @@ public class MessagesController : ControllerBase
             }
 
 
-            if(message.SenderId != senderId)
+            if (message.SenderId != senderId)
             {
                 return Unauthorized(new { error = "You are not authorized to delete this message" });
             }
@@ -191,6 +194,69 @@ public class MessagesController : ControllerBase
         {
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing your request" });
         }
+
+
+    }
+
+
+    [HttpGet("messages")]
+    [Authorize]
+    public async Task<IActionResult> RetrieveConversation([FromBody] RetrieveConversationReqDto request)
+    {
+
+
+        try
+        {
+            // Validate request parameters
+            if (request.Count <= 0)
+            {
+                return BadRequest(new { error = "Count must be a positive number" });
+            }
+
+            var userId = Guid.Parse(User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
+            if (userId == request.UserId)
+            {
+                return BadRequest(new { error = "Cannot retrieve conversation with yourself" });
+            }
+
+            //fetch conversation query
+            var messagesQuery = _context.Messages
+            .Where(m => (m.SenderId == userId && m.ReceiverId == request.UserId) ||
+                        (m.SenderId == request.UserId && m.ReceiverId == userId));
+
+            if (request.Before.HasValue)
+            {
+                messagesQuery = messagesQuery.Where(m => m.Timestamp < request.Before.Value);
+            }
+
+
+            messagesQuery = request.Sort.ToLower() == "desc" ? messagesQuery.OrderByDescending(m => m.Timestamp)
+                : messagesQuery.OrderBy(m => m.Timestamp);
+
+
+            var messages = await messagesQuery
+                .Take(request.Count)
+                .Select(m => new MessageDto
+                {
+                    Id = m.Id,
+                    SenderId = m.SenderId,
+                    ReceiverId = m.ReceiverId,
+                    Content = m.Content,
+                    Timestamp = m.Timestamp
+                }).ToListAsync();
+
+            if (messages.Count == 0)
+            {
+                return NotFound(new { error = "No messages found" });
+            }
+
+            return Ok(new RetrieveConversationResDto { Messages = messages });
+        }
+        catch(Exception ex)
+        {
+            return StatusCode(500, new { error = "An error occurred while processing your request", details = ex.Message });
+        }
+
 
 
     }
