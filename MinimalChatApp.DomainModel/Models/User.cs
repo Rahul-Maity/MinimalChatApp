@@ -23,4 +23,8 @@ public class User
     public string Password { get; set; }
 
     public string Token {  get; set; }
+
+    // Navigation properties
+    public ICollection<Message> SentMessages { get; set; } = new List<Message>(); 
+    public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
 }
