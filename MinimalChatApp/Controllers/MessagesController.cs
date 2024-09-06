@@ -86,4 +86,62 @@ public class MessagesController : ControllerBase
 
     }
 
+
+
+
+
+    [HttpPut("messages/{messageId}")]
+    [Authorize]
+    public async Task<IActionResult> SendMessage(Guid messageId,[FromBody] EditMessageReqDto model)
+    {
+
+        // Validate the model
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+            return BadRequest(new { error = "Validation failed", details = errors });
+        }
+
+        var senderId = Guid.Parse(User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
+
+        var message = await _context.Messages.FindAsync(messageId);
+        if (message == null)
+        {
+            return NotFound(new { error = "Message not found" });
+        }
+
+        //check if the message sender is the one who is try to edit
+        if(message.SenderId!=senderId)
+        {
+            return Unauthorized(new { error = "You are not authorized to edit this message" });
+        }
+
+        var new_content = model.Content;
+        if (string.IsNullOrWhiteSpace(new_content))
+        {
+            return BadRequest(new { error = "Message content cannot be empty" });
+        }
+
+        message.Content = new_content;
+
+        await _context.SaveChangesAsync();
+
+
+
+        var response = new EditMessageResDto
+        {
+            MessageId = message.Id,
+            SenderId = message.SenderId,
+            ReceiverId = message.ReceiverId,
+            Content = message.Content,
+            Timestamp = message.Timestamp
+        };
+
+
+
+        return Ok(response);
+
+
+    }
+
 }
