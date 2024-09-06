@@ -13,6 +13,7 @@ public class ApplicationDbContext:DbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
     
+    public DbSet<ApiLog> ApiLogs { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Message> Messages { get; set; }
 

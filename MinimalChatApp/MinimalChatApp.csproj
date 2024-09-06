@@ -25,4 +25,8 @@
     <ProjectReference Include="..\MinimalChatApp.DomainModel\MinimalChatApp.DomainModel.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="..\MinimalChatApp.Core\MinimalChatApp.Core.csproj" />
+	</ItemGroup>
+
 </Project>

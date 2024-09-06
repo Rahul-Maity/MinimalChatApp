@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+using MinimalChatApp.Core.Middlewares;
 using MinimalChatApp.DomainModel.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -59,7 +60,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 app.UseAuthentication();
 
