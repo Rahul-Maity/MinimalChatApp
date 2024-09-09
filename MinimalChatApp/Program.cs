@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 
 using MinimalChatApp.Core.Middlewares;
 using MinimalChatApp.DomainModel.Data;
+using MinimalChatApp.Repository.ApiLogs;
 using MinimalChatApp.Repository.Messages;
 using MinimalChatApp.Repository.Users;
 
@@ -52,6 +53,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql
 builder.Services.AddScoped<IUserRepository,UserRepository>();
 
 builder.Services.AddScoped<IMessageRepository,MessageRepository>();
+
+builder.Services.AddScoped<ILogRepository,LogRepository>();
 
 
 

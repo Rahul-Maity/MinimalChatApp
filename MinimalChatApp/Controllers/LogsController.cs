@@ -5,16 +5,17 @@ using Microsoft.EntityFrameworkCore;
 
 using MinimalChatApp.DomainModel.Data;
 using MinimalChatApp.DomainModel.Dtos.Incoming;
+using MinimalChatApp.Repository.ApiLogs;
 
 namespace MinimalChatApp.Controllers;
 [Route("api/")]
 [ApiController]
 public class LogsController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-    public LogsController(ApplicationDbContext context)
+    private readonly ILogRepository _logRepository;
+    public LogsController(ILogRepository logRepository)
     {
-        _context= context;
+       _logRepository = logRepository;
     }
 
     [HttpGet("log")]
@@ -26,17 +27,15 @@ public class LogsController : ControllerBase
             return BadRequest(new { error = "Invalid date format for StartTime or EndTime." });
         }
 
-        var startTime = model.StartTime;   
+        var startTime = model.StartTime.Value;   
         
-        var endTime = model.EndTime;
+        var endTime = model.EndTime.Value;
 
         try
         {
-            // Fetch logs from the database
-            var logs = await _context.ApiLogs
-                .Where(log => log.TimeOfCall >= startTime && log.TimeOfCall <= endTime)
-                .OrderByDescending(log => log.TimeOfCall)
-                .ToListAsync();
+           
+
+            var logs = await _logRepository.GetLogsAsync(startTime, endTime);
 
             if (!logs.Any())
             {
