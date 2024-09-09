@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 
 using MinimalChatApp.Core.Middlewares;
 using MinimalChatApp.DomainModel.Data;
+using MinimalChatApp.Repository.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +48,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
 
+builder.Services.AddScoped<IUserRepository,UserRepository>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -60,13 +63,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseMiddleware<RequestLoggingMiddleware>();
 
-app.UseAuthentication();
-
-app.UseRouting();
 app.UseHttpsRedirection();
 
+app.UseMiddleware<RequestLoggingMiddleware>();
+
+
+
+app.UseRouting();
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

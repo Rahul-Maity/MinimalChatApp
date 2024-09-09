@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinimalChatApp.Core", "Mini
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinimalChatApp.Util", "MinimalChatApp.Util\MinimalChatApp.Util.csproj", "{676A517C-A306-4F1F-ACDB-33B7A85EE751}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinimalChatApp.Repository", "MinimalChatApp.Repository\MinimalChatApp.Repository.csproj", "{5465776F-14A9-4045-BB92-4B95C4F2D737}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{676A517C-A306-4F1F-ACDB-33B7A85EE751}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{676A517C-A306-4F1F-ACDB-33B7A85EE751}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{676A517C-A306-4F1F-ACDB-33B7A85EE751}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5465776F-14A9-4045-BB92-4B95C4F2D737}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5465776F-14A9-4045-BB92-4B95C4F2D737}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5465776F-14A9-4045-BB92-4B95C4F2D737}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5465776F-14A9-4045-BB92-4B95C4F2D737}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

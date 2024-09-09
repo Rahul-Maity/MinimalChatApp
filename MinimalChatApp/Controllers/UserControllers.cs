@@ -14,8 +14,11 @@ using Microsoft.IdentityModel.Tokens;
 using MinimalChatApp.DomainModel.Data;
 using MinimalChatApp.DomainModel.Dtos.Generic;
 using MinimalChatApp.DomainModel.Dtos.Incoming;
+
+
 using MinimalChatApp.DomainModel.Dtos.Outgoing;
 using MinimalChatApp.DomainModel.Models;
+using MinimalChatApp.Repository.Users;
 using MinimalChatApp.Util.Helpers;
 
 namespace MinimalChatApp.Core.Controllers;
@@ -26,10 +29,13 @@ public class UserControllers : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
-    public UserControllers(ApplicationDbContext context, IConfiguration configuration)
+
+    private readonly IUserRepository _userRepository;
+    public UserControllers(ApplicationDbContext context, IConfiguration configuration,IUserRepository userRepository)
     {
         _context = context;
         _configuration = configuration;
+        _userRepository = userRepository;
     }
 
     [HttpPost("register")]
@@ -42,7 +48,7 @@ public class UserControllers : ControllerBase
 
 
         //check email
-        if (await CheckEmailExistAsync(model.Email))
+        if (await _userRepository.CheckEmailExistAsync(model.Email))
         {
             return Conflict(new { message = "Email already registered" });
         }
@@ -54,8 +60,11 @@ public class UserControllers : ControllerBase
             Password = PasswordHasher.HashPassword(model.Password),
             Token = ""
         };
-        await _context.Users.AddAsync(userToAdd);
-        await _context.SaveChangesAsync();
+
+        await _userRepository.AddUserAsync(userToAdd);
+
+        await _userRepository.SaveChangesAsync();
+       
 
 
 
@@ -78,8 +87,9 @@ public class UserControllers : ControllerBase
             return BadRequest(new { error = "Validation failed", details = errors });
         }
 
+        var user = await _userRepository.GetUserByEmailAsync(model.Email);
 
-        var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == model.Email);
+       
 
         if (user == null) { return Unauthorized(new { message = "User with this mail doesn't exists" }); }
 
@@ -93,7 +103,9 @@ public class UserControllers : ControllerBase
         user.Token = CreateJwtToken(user);
         var newAccessToken = user.Token;
 
-        await _context.SaveChangesAsync();
+        await _userRepository.SaveChangesAsync();
+
+        
 
         var response = new LoginResDto
         {
@@ -121,15 +133,10 @@ public class UserControllers : ControllerBase
         {
             //Fetching the logged in user's id from claim to filter out response
             var currentUserId = Guid.Parse(User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
-            var users = await _context.Users
-                .Where(u => u.Id != currentUserId)
-                .Select(u => new GetUserResDto
-                {
-                    Id = u.Id,
-                    Name = u.FullName,
-                    Email = u.Email
-                })
-                .ToListAsync();
+
+            var users = await _userRepository.GetUsersExceptCurrentUserAsync(currentUserId);
+
+            
             return Ok(new { users });
         }
         catch (Exception ex)

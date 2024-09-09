@@ -27,6 +27,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\MinimalChatApp.Core\MinimalChatApp.Core.csproj" />
+		<ProjectReference Include="..\MinimalChatApp.Repository\MinimalChatApp.Repository.csproj" />
 	</ItemGroup>
 
 </Project>

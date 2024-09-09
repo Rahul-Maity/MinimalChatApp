@@ -60,10 +60,12 @@ public class RequestLoggingMiddleware
                 var logEntry = new ApiLog
                 {
                     IP = ipAddress,
-                    TimeOfCall = timeOfCall,
+                    TimeOfCall = timeOfCall.ToUniversalTime(),
                     RequestBody = requestBody,
                     Username = userName
                 };
+
+                
                 dbContext.ApiLogs.Add(logEntry);
 
                 await dbContext.SaveChangesAsync();
