@@ -10,6 +10,7 @@ using MinimalChatApp.DomainModel.Dtos.Generic;
 using MinimalChatApp.DomainModel.Dtos.Incoming;
 using MinimalChatApp.DomainModel.Dtos.Outgoing;
 using MinimalChatApp.DomainModel.Models;
+using MinimalChatApp.Repository.Messages;
 
 namespace MinimalChatApp.Controllers;
 [Route("api/")]
@@ -18,10 +19,13 @@ public class MessagesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
-    public MessagesController(ApplicationDbContext context, IConfiguration configuration)
+
+    private readonly IMessageRepository _messageRepository;
+    public MessagesController(ApplicationDbContext context, IConfiguration configuration,IMessageRepository messageRepository)
     {
         _configuration = configuration;
         _context = context;
+        _messageRepository = messageRepository;
     }
 
     [HttpPost("messages")]
@@ -38,10 +42,10 @@ public class MessagesController : ControllerBase
         {
             return BadRequest(new { error = "Message content cannot be empty" });
         }
-        var receiverExists = await _context.Users.AnyAsync(u => u.Id == model.ReceiverId);
+        
 
 
-        if (!receiverExists)
+        if (!await _messageRepository.CheckReceiverExistsAsync(model.ReceiverId))
         {
             return BadRequest(new { error = "Receiver does not exist" });
         }
@@ -62,17 +66,18 @@ public class MessagesController : ControllerBase
                 Content = model.Content,
                 Timestamp = DateTime.UtcNow
             };
+            var createdMessage = await _messageRepository.SendMessageAsync(message);
 
-            _context.Messages.Add(message);
-            await _context.SaveChangesAsync();
+
+           
 
             var response = new SendMessageResDto
             {
-                MessageId = message.Id,
-                SenderId = message.SenderId,
-                ReceiverId = message.ReceiverId,
-                Content = message.Content,
-                Timestamp = message.Timestamp
+                MessageId = createdMessage.Id,
+                SenderId = createdMessage.SenderId,
+                ReceiverId = createdMessage.ReceiverId,
+                Content = createdMessage.Content,
+                Timestamp = createdMessage.Timestamp
             };
             return Ok(response);
         }
@@ -94,7 +99,7 @@ public class MessagesController : ControllerBase
 
     [HttpPut("messages/{messageId}")]
     [Authorize]
-    public async Task<IActionResult> SendMessage(Guid messageId, [FromBody] EditMessageReqDto model)
+    public async Task<IActionResult> EditMessage(Guid messageId, [FromBody] EditMessageReqDto model)
     {
 
         // Validate the model
@@ -106,7 +111,9 @@ public class MessagesController : ControllerBase
 
         var senderId = Guid.Parse(User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
 
-        var message = await _context.Messages.FindAsync(messageId);
+        
+
+        var message = await _messageRepository.FindMessageByIdAsync(messageId);
         if (message == null)
         {
             return NotFound(new { error = "Message not found" });
@@ -124,19 +131,19 @@ public class MessagesController : ControllerBase
             return BadRequest(new { error = "Message content cannot be empty" });
         }
 
-        message.Content = new_content;
 
-        await _context.SaveChangesAsync();
+        var editedMessage = await _messageRepository.EditMessageAsync(messageId, model.Content, senderId);
+       
 
 
 
         var response = new EditMessageResDto
         {
-            MessageId = message.Id,
-            SenderId = message.SenderId,
-            ReceiverId = message.ReceiverId,
-            Content = message.Content,
-            Timestamp = message.Timestamp
+            MessageId = editedMessage.Id,
+            SenderId = editedMessage.SenderId,
+            ReceiverId = editedMessage.ReceiverId,
+            Content = editedMessage.Content,
+            Timestamp = editedMessage.Timestamp
         };
 
 
@@ -169,32 +176,27 @@ public class MessagesController : ControllerBase
             return Unauthorized(new { error = "Invalid authentication token" });
         }
 
+
         try
         {
-            var message = await _context.Messages.FindAsync(messageId);
-            if (message == null)
-            {
-                return NotFound(new { error = "Message not found" });
-            }
-
-
-            if (message.SenderId != senderId)
-            {
-                return Unauthorized(new { error = "You are not authorized to delete this message" });
-            }
-
-            _context.Messages.Remove(message);
-            await _context.SaveChangesAsync();
-
-
+            await _messageRepository.DeleteMessageAsync(messageId, senderId);
             return Ok(new { message = "Message deleted successfully" });
+        }
 
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { error = "Message not found" });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new { error = "You are not authorized to delete this message" });
         }
         catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing your request" });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing your request", details = ex.Message });
         }
 
+        
 
     }
 
@@ -219,37 +221,13 @@ public class MessagesController : ControllerBase
                 return BadRequest(new { error = "Cannot retrieve conversation with yourself" });
             }
 
-            //fetch conversation query
-            var messagesQuery = _context.Messages
-            .Where(m => (m.SenderId == userId && m.ReceiverId == request.UserId) ||
-                        (m.SenderId == request.UserId && m.ReceiverId == userId));
 
-            if (request.Before.HasValue)
-            {
-                messagesQuery = messagesQuery.Where(m => m.Timestamp < request.Before.Value);
-            }
-
-
-            messagesQuery = request.Sort.ToLower() == "desc" ? messagesQuery.OrderByDescending(m => m.Timestamp)
-                : messagesQuery.OrderBy(m => m.Timestamp);
-
-
-            var messages = await messagesQuery
-                .Take(request.Count)
-                .Select(m => new MessageDto
-                {
-                    Id = m.Id,
-                    SenderId = m.SenderId,
-                    ReceiverId = m.ReceiverId,
-                    Content = m.Content,
-                    Timestamp = m.Timestamp
-                }).ToListAsync();
+            var messages = await _messageRepository.RetrieveConversationAsync(userId, request);
 
             if (messages.Count == 0)
             {
                 return NotFound(new { error = "No messages found" });
             }
-
             return Ok(new RetrieveConversationResDto { Messages = messages });
         }
         catch(Exception ex)

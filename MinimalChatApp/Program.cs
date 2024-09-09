@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 
 using MinimalChatApp.Core.Middlewares;
 using MinimalChatApp.DomainModel.Data;
+using MinimalChatApp.Repository.Messages;
 using MinimalChatApp.Repository.Users;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,6 +50,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql
 
 
 builder.Services.AddScoped<IUserRepository,UserRepository>();
+
+builder.Services.AddScoped<IMessageRepository,MessageRepository>();
+
+
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
