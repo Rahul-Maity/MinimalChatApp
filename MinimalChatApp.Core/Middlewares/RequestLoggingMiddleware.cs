@@ -47,6 +47,9 @@ public class RequestLoggingMiddleware
                 }
             }
 
+
+            requestBody = requestBody ?? string.Empty;
+
             var ipAddress = context.Connection.RemoteIpAddress?.ToString();
             var timeOfCall = DateTime.UtcNow;
 
